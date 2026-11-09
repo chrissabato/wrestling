@@ -4,185 +4,336 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Wrestling Results</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800;900&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #f5f6f8;
+    --mat: #a3172f;          /* competition mat crimson */
+    --mat-deep: #7c0f22;
+    --floor: #e6e8eb;        /* gym floor gray */
     --card: #ffffff;
-    --text: #1d2330;
-    --muted: #667085;
-    --border: #e1e4ea;
-    --accent: #1f4e8c;
-    --win: #1a7f37;
-    --win-bg: #e6f4ea;
-    --loss: #b42318;
-    --loss-bg: #fdecea;
-    --neutral-bg: #eef0f3;
-    --gold: #b8860b;
+    --ink: #17191e;
+    --muted: #5d6470;
+    --line: #d5d9df;
+    --win: #1d7a45;
+    --loss: #a3172f;
+    --gold: #d9a21b;
+    --silver: #a7adb5;
+    --bronze: #b0703c;
+    --display: "Big Shoulders Display", "Arial Narrow", sans-serif;
+    --body: "Barlow", system-ui, sans-serif;
   }
   @media (prefers-color-scheme: dark) {
     :root {
-      --bg: #12151b;
-      --card: #1b2029;
-      --text: #e6e9ef;
-      --muted: #98a2b3;
-      --border: #2c3340;
-      --accent: #7fb0ff;
-      --win: #5fd17f;
-      --win-bg: #173322;
-      --loss: #ff8a80;
-      --loss-bg: #3a1c1c;
-      --neutral-bg: #262c37;
-      --gold: #e6b84a;
+      --mat: #c22a43;
+      --mat-deep: #6d0d1d;
+      --floor: #1b1d22;
+      --card: #25282f;
+      --ink: #eceef2;
+      --muted: #9aa2ae;
+      --line: #363a43;
+      --win: #4cc27d;
+      --loss: #f0687d;
     }
   }
   * { box-sizing: border-box; }
+  html { scroll-padding-top: 120px; }
   body {
     margin: 0;
-    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
-    background: var(--bg);
-    color: var(--text);
+    font: 16px/1.45 var(--body);
+    background: var(--floor);
+    color: var(--ink);
   }
-  header {
-    background: var(--accent);
+  :focus-visible { outline: 3px solid var(--gold); outline-offset: 2px; }
+  button, input, select { font: inherit; color: inherit; }
+
+  /* ---------- Mat header ---------- */
+  .mat {
+    position: relative;
+    overflow: hidden;
+    background: var(--mat-deep);
+    background: radial-gradient(circle at 50% 120%, var(--mat) 0 60%, var(--mat-deep) 100%);
     color: #fff;
-    padding: 18px 16px;
+    padding: 28px 16px 36px;
   }
-  @media (prefers-color-scheme: dark) { header { background: #1f2a3d; } }
-  header h1 { margin: 0; font-size: 1.4rem; }
-  header .sub { opacity: .85; font-size: .95rem; margin-top: 2px; }
-  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+  .mat::after {               /* the wrestling circle, sitting off the edge */
+    content: "";
+    position: absolute;
+    width: 520px; height: 520px;
+    right: -180px; top: -220px;
+    border: 10px solid rgba(255,255,255,.14);
+    border-radius: 50%;
+    pointer-events: none;
+  }
+  .mat-inner { position: relative; max-width: 1040px; margin: 0 auto; z-index: 1; }
+  .mat h1 {
+    font: 900 clamp(2.4rem, 7vw, 4.4rem)/.92 var(--display);
+    margin: 0;
+    letter-spacing: .01em;
+    max-width: 16ch;
+  }
+  .mat .sub { margin-top: 10px; font-size: 1.05rem; opacity: .85; }
 
+  /* Before a file is loaded, the center circle is the drop target */
   #drop {
-    border: 2px dashed var(--border);
-    border-radius: 10px;
-    background: var(--card);
-    padding: 28px 16px;
+    margin: 30px auto 6px;
+    width: min(82vw, 340px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    border: 8px solid #fff;
+    display: grid;
+    place-content: center;
     text-align: center;
-    color: var(--muted);
+    gap: 14px;
+    padding: 30px;
+    transition: transform .15s ease, background-color .15s ease;
   }
-  #drop.over { border-color: var(--accent); color: var(--text); }
-  #drop label { color: var(--accent); cursor: pointer; text-decoration: underline; }
-  #drop input { display: none; }
-  #error { color: var(--loss); margin-top: 10px; white-space: pre-wrap; }
-
-  #controls {
-    display: none;
-    flex-wrap: wrap;
-    gap: 10px;
-    align-items: center;
-    margin: 14px 0;
-  }
-  #controls input[type=search], #controls select {
-    font: inherit;
-    padding: 7px 10px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--card);
-    color: var(--text);
-  }
-  #controls input[type=search] { flex: 1 1 220px; min-width: 0; }
-  #controls label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
-  #controls button {
-    font: inherit;
-    padding: 7px 12px;
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    background: var(--card);
-    color: var(--text);
+  #drop.over { background: rgba(255,255,255,.12); transform: scale(1.03); }
+  #drop p { margin: 0; font-size: 1.1rem; line-height: 1.3; }
+  /* starting lines: one green, one red */
+  .lines { display: flex; justify-content: center; gap: 10px; }
+  .lines span { width: 34px; height: 6px; border-radius: 1px; background: #2fb163; }
+  .lines span + span { background: #ff4d5e; }
+  .pick {
+    justify-self: center;
+    background: #fff;
+    color: var(--mat-deep);
+    font-weight: 700;
+    border: 0;
+    border-radius: 999px;
+    padding: 9px 20px;
     cursor: pointer;
   }
-  #summary { color: var(--muted); font-size: .9rem; margin-bottom: 8px; }
+  #file { position: absolute; width: 1px; height: 1px; opacity: 0; }
+  #error {
+    max-width: 560px;
+    margin: 14px auto 0;
+    text-align: center;
+    white-space: pre-wrap;
+    background: rgba(0,0,0,.25);
+    border-radius: 8px;
+  }
+  #error:not(:empty) { padding: 10px 14px; }
+  body.loaded #drop, body.loaded .intro { display: none; }
+  .intro { text-align: center; margin: 0 auto; }
+  .intro h1 { margin: 0 auto; }
 
-  .weight { margin-top: 22px; }
-  .weight > h2 {
-    font-size: 1.15rem;
-    margin: 0 0 8px;
-    padding-bottom: 4px;
-    border-bottom: 2px solid var(--accent);
-  }
-  .wrestler {
+  /* ---------- Sticky toolbar ---------- */
+  #toolbar {
+    display: none;
+    position: sticky;
+    top: 0;
+    z-index: 10;
     background: var(--card);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    margin-bottom: 10px;
-    overflow: hidden;
+    border-bottom: 1px solid var(--line);
+    box-shadow: 0 6px 18px -12px rgba(0,0,0,.35);
   }
-  .wrestler .head {
+  body.loaded #toolbar { display: block; }
+  .tb-inner { max-width: 1040px; margin: 0 auto; padding: 10px 16px; }
+  .weights {
+    display: flex;
+    gap: 6px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 8px;
+  }
+  .weights::-webkit-scrollbar { display: none; }
+  .weights a {
+    flex: none;
+    font: 800 1.15rem/1 var(--display);
+    color: var(--ink);
+    text-decoration: none;
+    padding: 7px 11px 6px;
+    border-radius: 6px;
+    background: var(--floor);
+  }
+  .weights a:hover { background: var(--mat); color: #fff; }
+  .filters { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+  .filters input[type=search], .filters select {
+    padding: 7px 10px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--floor);
+    min-width: 0;
+  }
+  .filters input[type=search] { flex: 1 1 200px; }
+  .filters select { flex: 0 1 220px; max-width: 100%; }
+  .filters label { display: flex; gap: 6px; align-items: center; color: var(--muted); white-space: nowrap; }
+  .filters button {
+    padding: 7px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: var(--card);
+    cursor: pointer;
+  }
+  .filters button:hover { border-color: var(--mat); }
+
+  /* ---------- Results ---------- */
+  main { max-width: 1040px; margin: 0 auto; padding: 8px 16px 64px; }
+  #summary { color: var(--muted); font-size: .92rem; margin: 14px 0 0; }
+
+  .weight { margin-top: 34px; }
+  .weight-head {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+    border-bottom: 4px solid var(--mat);
+  }
+  .weight-head h2 {
+    font: 900 clamp(3.4rem, 10vw, 5.2rem)/.8 var(--display);
+    color: var(--mat);
+    margin: 0;
+  }
+  .weight-head .unit { font: 800 1.4rem var(--display); color: var(--mat); }
+  .weight-head .count { margin-left: auto; color: var(--muted); font-size: .92rem; padding-bottom: 6px; }
+
+  .placer {
+    display: grid;
+    grid-template-columns: 64px minmax(0, 1fr);
+    gap: 0 14px;
+    background: var(--card);
+    border-radius: 8px;
+    padding: 14px 16px 6px;
+    margin-bottom: 10px;
+  }
+  .medal {
+    grid-row: span 2;
+    width: 58px; height: 58px;
+    border-radius: 50%;
+    display: grid;
+    place-content: center;
+    text-align: center;
+    font: 900 1.35rem/1 var(--display);
+    color: #fff;
+    background: var(--muted);
+  }
+  .medal.p1 { background: var(--gold); color: #3b2a00; }
+  .medal.p2 { background: var(--silver); color: #23272d; }
+  .medal.p3 { background: var(--bronze); }
+  .medal.range { font-size: 1rem; outline: 2px dashed currentColor; outline-offset: -6px; }
+  .who { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px 12px; }
+  .who .name { font: 800 1.65rem/1.05 var(--display); }
+  .who .team { color: var(--muted); font-weight: 500; }
+  .who .record {
+    margin-left: auto;
+    font: 800 1.5rem/1 var(--display);
+    font-variant-numeric: tabular-nums;
+  }
+  .placer .note-line { color: var(--muted); font-size: .88rem; }
+  .placer table { grid-column: 1 / -1; margin-top: 10px; }
+
+  table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+  col.c-round { width: 140px; }
+  col.c-res { width: 175px; }
+  col.c-score { width: 95px; }
+  td { padding: 8px 10px; border-top: 1px solid var(--line); vertical-align: baseline; }
+  td:first-child { border-left: 4px solid transparent; padding-left: 10px; }
+  tr.W td:first-child { border-left-color: var(--win); }
+  tr.L td:first-child { border-left-color: var(--loss); }
+  td.round { color: var(--muted); }
+  td.res { font-weight: 600; }
+  tr.W td.res { color: var(--win); }
+  tr.L td.res { color: var(--loss); }
+  td.score { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+  .opp-team { color: var(--muted); }
+  .muted { color: var(--muted); }
+
+  /* Non-placers: one compact, expandable list per weight */
+  .dnp { margin-top: 14px; }
+  .dnp > summary {
+    cursor: pointer;
+    font: 800 1.25rem var(--display);
+    padding: 6px 0;
+    color: var(--muted);
+  }
+  .dnp-list { background: var(--card); border-radius: 8px; overflow: hidden; }
+  .dnp-list details + details { border-top: 1px solid var(--line); }
+  .dnp-list summary {
     display: flex;
     flex-wrap: wrap;
+    gap: 2px 12px;
     align-items: baseline;
-    gap: 4px 12px;
-    padding: 10px 14px;
-    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    cursor: pointer;
+    list-style: none;
   }
-  .wrestler .name { font-weight: 650; font-size: 1.05rem; }
-  .wrestler .team { color: var(--muted); }
-  .wrestler .finish { margin-left: auto; font-weight: 600; }
-  .wrestler .finish.placed { color: var(--gold); }
-  .wrestler .finish.out { color: var(--muted); font-weight: 500; }
-  .wrestler .record { color: var(--muted); font-size: .9rem; }
+  .dnp-list summary::-webkit-details-marker { display: none; }
+  .dnp-list summary:hover { background: var(--floor); }
+  .dnp-list .name { font-weight: 700; }
+  .dnp-list .team { color: var(--muted); }
+  .dnp-list .out { margin-left: auto; color: var(--muted); font-size: .92rem; }
+  .dnp-list .record { font-weight: 700; font-variant-numeric: tabular-nums; min-width: 2.6em; text-align: right; }
+  .dnp-list table { margin: 0 16px 12px; width: calc(100% - 32px); }
 
-  table { width: 100%; border-collapse: collapse; }
-  td { padding: 7px 14px; border-top: 1px solid var(--border); vertical-align: top; }
-  tr:first-child td { border-top: 0; }
-  td.round { white-space: nowrap; color: var(--muted); width: 1%; }
-  td.res { white-space: nowrap; width: 1%; }
-  td.score { white-space: nowrap; width: 1%; font-variant-numeric: tabular-nums; }
-  .badge {
-    display: inline-block;
-    min-width: 22px;
-    text-align: center;
-    font-weight: 700;
-    font-size: .8rem;
-    padding: 1px 6px;
-    border-radius: 4px;
-    margin-right: 6px;
-  }
-  .badge.W { color: var(--win); background: var(--win-bg); }
-  .badge.L { color: var(--loss); background: var(--loss-bg); }
-  .badge.N { color: var(--muted); background: var(--neutral-bg); }
-  .opp-team { color: var(--muted); }
-  .note { color: var(--muted); font-size: .85rem; font-style: italic; }
+  .empty { text-align: center; color: var(--muted); padding: 40px 0; }
 
-  /* Stack match rows on narrow screens */
   @media (max-width: 640px) {
+    html { scroll-padding-top: 150px; }
+    .placer { grid-template-columns: 48px minmax(0, 1fr); padding: 12px 12px 4px; }
+    .filters select { flex: 1 1 100%; }
+    .medal { width: 46px; height: 46px; font-size: 1.1rem; }
+    .medal.range { font-size: .85rem; }
+    .who .record { margin-left: 0; font-size: 1.2rem; }
     table, tbody, tr, td { display: block; width: auto !important; }
-    tr { padding: 8px 14px; border-top: 1px solid var(--border); }
-    tr:first-child { border-top: 0; }
-    td { padding: 0; border: 0; }
+    colgroup { display: none; }
+    tr { border-top: 1px solid var(--line); border-left: 4px solid transparent; padding: 7px 10px; }
+    tr.W { border-left-color: var(--win); }
+    tr.L { border-left-color: var(--loss); }
+    td, td:first-child { padding: 0; border: 0; }
     td.round { font-size: .85rem; }
-    td.res, td.score { display: inline; }
-    td.score::before { content: " · "; color: var(--muted); }
-    .wrestler .finish { margin-left: 0; width: 100%; }
+    td.res, td.score { display: inline; margin-right: 8px; }
+    .dnp-list table { margin: 0 12px 10px; width: auto; }
   }
+
+  @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
   @media print {
-    header, #drop, #controls { display: none !important; }
-    body { background: #fff; color: #000; }
-    .wrestler { break-inside: avoid; }
+    #toolbar, #drop { display: none !important; }
+    .mat { background: none; color: #000; padding: 0; }
+    .mat::after { display: none; }
+    body { background: #fff; }
+    .placer, .dnp-list details { break-inside: avoid; }
   }
 </style>
 </head>
 <body>
-<header>
-  <h1 id="title">Wrestling Results</h1>
-  <div class="sub" id="subtitle">Load a TrackWrestling results CSV to get started</div>
+<header class="mat">
+  <div class="mat-inner">
+    <div class="intro" id="intro">
+      <h1>Wrestling Results</h1>
+      <p class="sub">Every wrestler's matches and finish, by weight class</p>
+    </div>
+    <div class="loaded-head" hidden>
+      <h1 id="title"></h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <div id="drop">
+      <div class="lines" aria-hidden="true"><span></span><span></span></div>
+      <p>Drop a TrackWrestling results CSV here</p>
+      <button type="button" class="pick" id="pickBtn">Choose a file</button>
+      <input type="file" id="file" accept=".csv,text/csv" tabindex="-1">
+    </div>
+    <div id="error" role="alert"></div>
+  </div>
 </header>
 
+<div id="toolbar">
+  <div class="tb-inner">
+    <nav class="weights" id="weightNav" aria-label="Jump to weight"></nav>
+    <div class="filters">
+      <input type="search" id="search" placeholder="Find a wrestler or team" aria-label="Find a wrestler or team">
+      <select id="teamFilter" aria-label="Team"><option value="">All teams</option></select>
+      <label><input type="checkbox" id="placersOnly"> Placers only</label>
+      <button id="openBtn" type="button">Open another file</button>
+      <button id="printBtn" type="button">Print</button>
+    </div>
+  </div>
+</div>
+
 <main>
-  <div id="drop">
-    Drag a CSV file here, or <label>choose a file<input type="file" id="file" accept=".csv,text/csv"></label>
-    <div id="error"></div>
-  </div>
-
-  <div id="controls">
-    <input type="search" id="search" placeholder="Search wrestler or team…">
-    <select id="weightFilter"><option value="">All weights</option></select>
-    <select id="teamFilter"><option value="">All teams</option></select>
-    <label><input type="checkbox" id="placersOnly"> Placers only</label>
-    <button id="printBtn" type="button">Print</button>
-  </div>
-
   <div id="summary"></div>
   <div id="results"></div>
 </main>
@@ -395,45 +546,68 @@ function wrestlerSort(a, b) {
   return (b.wins - a.wins) || (a.losses - b.losses) || a.name.localeCompare(b.name);
 }
 
+const isNumericWeight = wt => /^\d+(\.\d+)?$/.test(wt);
+const weightId = wt => "w-" + wt.replace(/[^\w-]/g, "_");
+
 function renderBout({ m, won }) {
   const [label, winVerb, lossVerb] = winTypeInfo(m.winType);
   const opp = won ? m.loser : m.winner;
   const oppTeam = won ? m.loserTeam : m.winnerTeam;
   const isBye = m.winType === "BYE";
-  const nc = m.winType === "NC";
-  const badge = isBye || nc ? '<span class="badge N">–</span>' :
-    `<span class="badge ${won ? "W" : "L"}">${won ? "W" : "L"}</span>`;
-  const oppHtml = isBye || !opp ? '<span class="note">Bye</span>' :
+  const neutral = isBye || m.winType === "NC";
+  const cls = neutral ? "N" : won ? "W" : "L";
+  const res = isBye ? "Bye" : neutral ? label : (won ? "W " : "L ") + label;
+  const oppHtml = isBye || !opp ? "" :
     `${won ? "over" : "to"} ${esc(opp)}${oppTeam ? ` <span class="opp-team">(${esc(oppTeam)})</span>` : ""}`;
-  return `<tr title="${esc(won ? winVerb : lossVerb)}">
+  return `<tr class="${cls}" title="${esc(won ? winVerb : lossVerb)}">
     <td class="round">${esc(m.round)}</td>
-    <td class="res">${badge}${esc(isBye ? "Bye" : label)}</td>
-    <td class="score">${esc(formatScore(m, won)) || "&nbsp;"}</td>
-    <td class="opp">${isBye ? "" : oppHtml}</td>
+    <td class="res">${esc(res)}</td>
+    <td class="score">${esc(formatScore(m, won))}</td>
+    <td class="opp">${oppHtml}</td>
   </tr>`;
 }
 
-function renderWrestler(w) {
-  const placed = w.place !== null;
-  return `<div class="wrestler">
-    <div class="head">
+const boutsTable = w => `<table><colgroup><col class="c-round"><col class="c-res"><col class="c-score"><col></colgroup><tbody>${w.bouts.map(renderBout).join("")}</tbody></table>`;
+
+function medal(w) {
+  const top = Math.floor(w.place);
+  const range = w.place !== top;
+  const text = range ? `${top}–${top + 1}` : ordinal(top);
+  return `<div class="medal p${top}${range ? " range" : ""}" aria-label="${esc(w.finish)}">${text}</div>`;
+}
+
+function renderPlacer(w) {
+  return `<article class="placer">
+    ${medal(w)}
+    <div class="who">
       <span class="name">${esc(w.name)}</span>
       <span class="team">${esc(w.team)}</span>
-      <span class="record">${w.wins}-${w.losses}</span>
-      <span class="finish ${placed ? "placed" : "out"}">${esc(w.finish)}${w.finishNote ? ` <span class="note">(${esc(w.finishNote)})</span>` : ""}</span>
+      <span class="record" title="Record at this event">${w.wins}-${w.losses}</span>
     </div>
-    <table><tbody>${w.bouts.map(renderBout).join("")}</tbody></table>
-  </div>`;
+    ${w.finishNote ? `<div class="note-line">${esc(w.finish)}: ${esc(w.finishNote)}</div>` : ""}
+    ${boutsTable(w)}
+  </article>`;
+}
+
+function renderNonPlacer(w, open) {
+  return `<details${open ? " open" : ""}>
+    <summary>
+      <span class="name">${esc(w.name)}</span>
+      <span class="team">${esc(w.team)}</span>
+      <span class="out">${esc(w.finish)}</span>
+      <span class="record">${w.wins}-${w.losses}</span>
+    </summary>
+    ${boutsTable(w)}
+  </details>`;
 }
 
 function render() {
   const q = document.getElementById("search").value.trim().toLowerCase();
-  const weight = document.getElementById("weightFilter").value;
   const team = document.getElementById("teamFilter").value;
   const placersOnly = document.getElementById("placersOnly").checked;
+  const narrowed = Boolean(q || team);
 
   const shown = allWrestlers.filter(w =>
-    (!weight || w.weight === weight) &&
     (!team || w.team === team) &&
     (!placersOnly || w.place !== null) &&
     (!q || w.name.toLowerCase().includes(q) || w.team.toLowerCase().includes(q)));
@@ -443,43 +617,60 @@ function render() {
     if (!byWeight.has(w.weight)) byWeight.set(w.weight, []);
     byWeight.get(w.weight).push(w);
   }
-  const html = [...byWeight.keys()].sort(weightSort).map(wt => {
+  const weights = [...byWeight.keys()].sort(weightSort);
+
+  const html = weights.map(wt => {
     const list = byWeight.get(wt).sort(wrestlerSort);
-    const label = /^\d+(\.\d+)?$/.test(wt) ? wt + " lbs" : wt;
-    return `<section class="weight"><h2>${esc(label)}</h2>${list.map(renderWrestler).join("")}</section>`;
+    const placers = list.filter(w => w.place !== null);
+    const others = list.filter(w => w.place === null);
+    // When searching, open everything that matched so results are visible at once.
+    const dnp = others.length ? `<details class="dnp"${narrowed ? " open" : ""}>
+        <summary>Did not place (${others.length})</summary>
+        <div class="dnp-list">${others.map(w => renderNonPlacer(w, narrowed)).join("")}</div>
+      </details>` : "";
+    return `<section class="weight" id="${weightId(wt)}">
+      <div class="weight-head">
+        <h2>${esc(wt)}</h2>${isNumericWeight(wt) ? '<span class="unit">lbs</span>' : ""}
+        <span class="count">${list.length} wrestler${list.length === 1 ? "" : "s"}</span>
+      </div>
+      ${placers.map(renderPlacer).join("")}
+      ${dnp}
+    </section>`;
   }).join("");
 
-  document.getElementById("results").innerHTML = html || '<p class="note">No wrestlers match these filters.</p>';
-  document.getElementById("summary").textContent =
-    `Showing ${shown.length} of ${allWrestlers.length} wrestlers`;
+  document.getElementById("results").innerHTML = html ||
+    '<p class="empty">No wrestlers match. Clear the search or pick "All teams".</p>';
+  document.getElementById("weightNav").innerHTML = weights
+    .map(wt => `<a href="#${weightId(wt)}">${esc(wt)}</a>`).join("");
+  document.getElementById("summary").textContent = shown.length === allWrestlers.length
+    ? `${allWrestlers.length} wrestlers`
+    : `Showing ${shown.length} of ${allWrestlers.length} wrestlers`;
 }
 
-function fillSelect(id, values, fmt) {
+function fillSelect(id, values) {
   const sel = document.getElementById(id);
   sel.length = 1;
-  for (const v of values) sel.add(new Option(fmt ? fmt(v) : v, v));
+  for (const v of values) sel.add(new Option(v, v));
 }
 
 function loadText(text, fileName) {
   const errorEl = document.getElementById("error");
   errorEl.textContent = "";
   try {
-    const matches = toMatches(parseCSV(text.replace(/^﻿/, "")));
-    if (!matches.length) throw new Error("No matches found in this file.");
+    const matches = toMatches(parseCSV(text.replace(/^\uFEFF/, "")));
+    if (!matches.length) throw new Error("This file has no matches in it. Check that it's a TrackWrestling results export.");
     allWrestlers = buildWrestlers(matches);
 
     const events = [...new Set(matches.map(m => m.event).filter(Boolean))];
     const dates = [...new Set(matches.map(m => m.date).filter(Boolean))];
-    document.getElementById("title").textContent = events.join(" / ") || "Wrestling Results";
+    document.getElementById("title").textContent = events.join(" / ") || fileName;
     document.getElementById("subtitle").textContent =
-      [dates.join(", "), matches[0].location, `${matches.length} matches`].filter(Boolean).join(" · ") ||
-      fileName;
+      [dates.join(", "), matches[0].location].filter(Boolean).join(" in ");
     document.title = (events[0] || "Wrestling") + " Results";
+    document.querySelector(".loaded-head").hidden = false;
+    document.body.classList.add("loaded");
 
-    fillSelect("weightFilter", [...new Set(allWrestlers.map(w => w.weight))].sort(weightSort),
-      v => /^\d+(\.\d+)?$/.test(v) ? v + " lbs" : v);
     fillSelect("teamFilter", [...new Set(allWrestlers.map(w => w.team).filter(Boolean))].sort());
-    document.getElementById("controls").style.display = "flex";
     render();
   } catch (e) {
     errorEl.textContent = e.message;
@@ -494,19 +685,26 @@ function loadFile(file) {
 
 // ---------- Wiring ----------
 
+const fileInput = document.getElementById("file");
+fileInput.addEventListener("change", e => e.target.files[0] && loadFile(e.target.files[0]));
+document.getElementById("pickBtn").addEventListener("click", () => fileInput.click());
+document.getElementById("openBtn").addEventListener("click", () => fileInput.click());
+
+// The whole page accepts a dropped file; the center circle lights up while dragging.
 const drop = document.getElementById("drop");
-document.getElementById("file").addEventListener("change", e => e.target.files[0] && loadFile(e.target.files[0]));
-drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
-drop.addEventListener("dragleave", () => drop.classList.remove("over"));
-drop.addEventListener("drop", e => {
+document.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+document.addEventListener("dragleave", e => { if (!e.relatedTarget) drop.classList.remove("over"); });
+document.addEventListener("drop", e => {
   e.preventDefault();
   drop.classList.remove("over");
   if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
 });
-for (const id of ["search", "weightFilter", "teamFilter", "placersOnly"]) {
+
+for (const id of ["search", "teamFilter", "placersOnly"]) {
   document.getElementById(id).addEventListener("input", render);
 }
 document.getElementById("printBtn").addEventListener("click", () => window.print());
+window.addEventListener("beforeprint", () => document.querySelectorAll("#results details").forEach(d => d.open = true));
 
 // Load a CSV hosted alongside the page: index.html?csv=results.csv
 const csvParam = new URLSearchParams(location.search).get("csv");
@@ -518,6 +716,6 @@ if (csvParam) {
 }
 </script>
 <script src="https://feedback.chrissabato.com/widget.js" data-app="wrestling"
-        data-color="#1f4e8c" data-font="inherit" data-theme="auto" defer></script>
+        data-color="#a3172f" data-font="inherit" data-theme="auto" defer></script>
 </body>
 </html>
