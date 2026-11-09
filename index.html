@@ -287,6 +287,33 @@
     .dnp-list table { margin: 0 12px 10px; width: auto; }
   }
 
+  /* ---------- Feedback widget (renders in its own shadow DOM) ---------- */
+  :root {
+    --fb-accent: var(--mat);
+    --fb-accent-text: #fff;
+    --fb-bg: var(--card);
+    --fb-text: var(--ink);
+    --fb-muted: var(--muted);
+    --fb-border: var(--line);
+    --fb-input-bg: var(--floor);
+    --fb-error: var(--loss);
+    --fb-backdrop: rgba(23, 25, 30, .6);
+    --fb-font: var(--body);
+    --fb-radius: 8px;
+    --fb-control-radius: 6px;
+    --fb-launcher-radius: 6px;
+  }
+  [data-feedback-widget]::part(launcher) {
+    font: 800 1.2rem/1 var(--display);
+    letter-spacing: .02em;
+    padding: 11px 18px 10px;
+  }
+  [data-feedback-widget]::part(dialog) { border-top: 8px solid var(--mat); }
+  [data-feedback-widget]::part(heading) { font: 900 2.2rem/1 var(--display); }
+  [data-feedback-widget]::part(type-selected) { font-weight: 700; }
+  [data-feedback-widget]::part(submit) { font: 800 1.2rem/1 var(--display); letter-spacing: .02em; }
+  [data-feedback-widget]::part(submit):hover { background: var(--mat-deep); }
+
   @media (prefers-reduced-motion: reduce) { * { transition: none !important; scroll-behavior: auto !important; } }
   @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
 
@@ -716,6 +743,6 @@ if (csvParam) {
 }
 </script>
 <script src="https://feedback.chrissabato.com/widget.js" data-app="wrestling"
-        data-color="#a3172f" data-font="inherit" data-theme="auto" defer></script>
+        data-heading="Send feedback" data-thanks="Thanks. Your feedback was sent." defer></script>
 </body>
 </html>
