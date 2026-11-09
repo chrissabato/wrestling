@@ -1,0 +1,521 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Wrestling Results</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --text: #1d2330;
+    --muted: #667085;
+    --border: #e1e4ea;
+    --accent: #1f4e8c;
+    --win: #1a7f37;
+    --win-bg: #e6f4ea;
+    --loss: #b42318;
+    --loss-bg: #fdecea;
+    --neutral-bg: #eef0f3;
+    --gold: #b8860b;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12151b;
+      --card: #1b2029;
+      --text: #e6e9ef;
+      --muted: #98a2b3;
+      --border: #2c3340;
+      --accent: #7fb0ff;
+      --win: #5fd17f;
+      --win-bg: #173322;
+      --loss: #ff8a80;
+      --loss-bg: #3a1c1c;
+      --neutral-bg: #262c37;
+      --gold: #e6b84a;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font: 15px/1.45 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+  }
+  header {
+    background: var(--accent);
+    color: #fff;
+    padding: 18px 16px;
+  }
+  @media (prefers-color-scheme: dark) { header { background: #1f2a3d; } }
+  header h1 { margin: 0; font-size: 1.4rem; }
+  header .sub { opacity: .85; font-size: .95rem; margin-top: 2px; }
+  main { max-width: 1000px; margin: 0 auto; padding: 16px; }
+
+  #drop {
+    border: 2px dashed var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    padding: 28px 16px;
+    text-align: center;
+    color: var(--muted);
+  }
+  #drop.over { border-color: var(--accent); color: var(--text); }
+  #drop label { color: var(--accent); cursor: pointer; text-decoration: underline; }
+  #drop input { display: none; }
+  #error { color: var(--loss); margin-top: 10px; white-space: pre-wrap; }
+
+  #controls {
+    display: none;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+    margin: 14px 0;
+  }
+  #controls input[type=search], #controls select {
+    font: inherit;
+    padding: 7px 10px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+  }
+  #controls input[type=search] { flex: 1 1 220px; min-width: 0; }
+  #controls label { display: flex; gap: 6px; align-items: center; color: var(--muted); }
+  #controls button {
+    font: inherit;
+    padding: 7px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+  }
+  #summary { color: var(--muted); font-size: .9rem; margin-bottom: 8px; }
+
+  .weight { margin-top: 22px; }
+  .weight > h2 {
+    font-size: 1.15rem;
+    margin: 0 0 8px;
+    padding-bottom: 4px;
+    border-bottom: 2px solid var(--accent);
+  }
+  .wrestler {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  .wrestler .head {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 12px;
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+  }
+  .wrestler .name { font-weight: 650; font-size: 1.05rem; }
+  .wrestler .team { color: var(--muted); }
+  .wrestler .finish { margin-left: auto; font-weight: 600; }
+  .wrestler .finish.placed { color: var(--gold); }
+  .wrestler .finish.out { color: var(--muted); font-weight: 500; }
+  .wrestler .record { color: var(--muted); font-size: .9rem; }
+
+  table { width: 100%; border-collapse: collapse; }
+  td { padding: 7px 14px; border-top: 1px solid var(--border); vertical-align: top; }
+  tr:first-child td { border-top: 0; }
+  td.round { white-space: nowrap; color: var(--muted); width: 1%; }
+  td.res { white-space: nowrap; width: 1%; }
+  td.score { white-space: nowrap; width: 1%; font-variant-numeric: tabular-nums; }
+  .badge {
+    display: inline-block;
+    min-width: 22px;
+    text-align: center;
+    font-weight: 700;
+    font-size: .8rem;
+    padding: 1px 6px;
+    border-radius: 4px;
+    margin-right: 6px;
+  }
+  .badge.W { color: var(--win); background: var(--win-bg); }
+  .badge.L { color: var(--loss); background: var(--loss-bg); }
+  .badge.N { color: var(--muted); background: var(--neutral-bg); }
+  .opp-team { color: var(--muted); }
+  .note { color: var(--muted); font-size: .85rem; font-style: italic; }
+
+  /* Stack match rows on narrow screens */
+  @media (max-width: 640px) {
+    table, tbody, tr, td { display: block; width: auto !important; }
+    tr { padding: 8px 14px; border-top: 1px solid var(--border); }
+    tr:first-child { border-top: 0; }
+    td { padding: 0; border: 0; }
+    td.round { font-size: .85rem; }
+    td.res, td.score { display: inline; }
+    td.score::before { content: " · "; color: var(--muted); }
+    .wrestler .finish { margin-left: 0; width: 100%; }
+  }
+
+  @media print {
+    header, #drop, #controls { display: none !important; }
+    body { background: #fff; color: #000; }
+    .wrestler { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="title">Wrestling Results</h1>
+  <div class="sub" id="subtitle">Load a TrackWrestling results CSV to get started</div>
+</header>
+
+<main>
+  <div id="drop">
+    Drag a CSV file here, or <label>choose a file<input type="file" id="file" accept=".csv,text/csv"></label>
+    <div id="error"></div>
+  </div>
+
+  <div id="controls">
+    <input type="search" id="search" placeholder="Search wrestler or team…">
+    <select id="weightFilter"><option value="">All weights</option></select>
+    <select id="teamFilter"><option value="">All teams</option></select>
+    <label><input type="checkbox" id="placersOnly"> Placers only</label>
+    <button id="printBtn" type="button">Print</button>
+  </div>
+
+  <div id="summary"></div>
+  <div id="results"></div>
+</main>
+
+<script>
+// ---------- CSV parsing ----------
+
+function parseCSV(text) {
+  const rows = [];
+  let row = [], field = "", inQuotes = false;
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (inQuotes) {
+      if (c === '"') {
+        if (text[i + 1] === '"') { field += '"'; i++; }
+        else inQuotes = false;
+      } else field += c;
+    } else if (c === '"') inQuotes = true;
+    else if (c === ",") { row.push(field); field = ""; }
+    else if (c === "\n" || c === "\r") {
+      if (c === "\r" && text[i + 1] === "\n") i++;
+      row.push(field); rows.push(row); row = []; field = "";
+    } else field += c;
+  }
+  if (field || row.length) { row.push(field); rows.push(row); }
+  return rows.filter(r => r.some(v => v.trim() !== ""));
+}
+
+// TrackWrestling wraps values as ="..." so Excel keeps them as text.
+function cleanValue(v) {
+  v = v.trim();
+  const m = v.match(/^="(.*)"$/s);
+  return (m ? m[1] : v).trim();
+}
+
+const COLUMNS = {
+  date: ["date"],
+  weight: ["weight", "weight class"],
+  round: ["round"],
+  winner: ["winning wrestler", "winner"],
+  winnerTeam: ["winning team", "winner team"],
+  result: ["result", "score"],
+  winType: ["win type", "type"],
+  loser: ["losing wrestler", "loser"],
+  loserTeam: ["losing team", "loser team"],
+  event: ["event", "tournament"],
+  city: ["city"],
+  state: ["state"],
+};
+
+function toMatches(rows) {
+  const header = rows[0].map(h => cleanValue(h).toLowerCase());
+  const idx = {};
+  for (const [key, names] of Object.entries(COLUMNS)) {
+    idx[key] = header.findIndex(h => names.includes(h));
+  }
+  const required = ["weight", "round", "winner", "winType", "loser"];
+  const missing = required.filter(k => idx[k] < 0);
+  if (missing.length) {
+    throw new Error("Couldn't find these columns: " + missing.map(k => COLUMNS[k][0]).join(", ") +
+      "\nColumns found: " + header.join(", "));
+  }
+  return rows.slice(1).map((r, i) => {
+    const get = k => (idx[k] >= 0 && r[idx[k]] !== undefined ? cleanValue(r[idx[k]]) : "");
+    return {
+      order: i,
+      date: get("date"),
+      weight: get("weight"),
+      round: get("round"),
+      winner: get("winner"),
+      winnerTeam: get("winnerTeam"),
+      result: get("result"),
+      winType: get("winType").toUpperCase(),
+      loser: get("loser"),
+      loserTeam: get("loserTeam"),
+      event: get("event"),
+      location: [get("city"), get("state")].filter(Boolean).join(", "),
+    };
+  }).filter(m => m.weight && m.winner);
+}
+
+// ---------- Result formatting ----------
+
+const WIN_TYPES = {
+  "F": ["Fall", "won by fall", "lost by fall"],
+  "DEC": ["Decision", "won by decision", "lost by decision"],
+  "MD": ["Major Decision", "won by major decision", "lost by major decision"],
+  "TF": ["Tech Fall", "won by tech fall", "lost by tech fall"],
+  "SV": ["Sudden Victory", "won in sudden victory", "lost in sudden victory"],
+  "TB": ["Tiebreaker", "won in tiebreaker", "lost in tiebreaker"],
+  "UTB": ["Ultimate Tiebreaker", "won in ultimate tiebreaker", "lost in ultimate tiebreaker"],
+  "BYE": ["Bye", "received a bye", "bye"],
+  "FOR": ["Forfeit", "won by forfeit", "lost by forfeit"],
+  "M FOR": ["Medical Forfeit", "won by medical forfeit", "lost by medical forfeit"],
+  "MFFL": ["Medical Forfeit", "won by medical forfeit", "lost by medical forfeit"],
+  "DEF": ["Injury Default", "won by injury default", "lost by injury default"],
+  "INJ": ["Injury Default", "won by injury default", "lost by injury default"],
+  "DQ": ["Disqualification", "won by disqualification", "lost by disqualification"],
+  "NC": ["No Contest", "no contest", "no contest"],
+};
+
+function winTypeInfo(code) {
+  if (WIN_TYPES[code]) return WIN_TYPES[code];
+  const base = code.split(/[-\s]/)[0];           // e.g. "SV-1", "TB-2"
+  if (WIN_TYPES[base]) {
+    const [label, w, l] = WIN_TYPES[base];
+    return [label + code.slice(base.length), w, l];
+  }
+  return [code || "?", "won (" + code + ")", "lost (" + code + ")"];
+}
+
+// "20-3 4:23" -> {score: "20-3", time: "4:23"}
+function splitResult(result) {
+  const score = (result.match(/\d+-\d+/) || [""])[0];
+  const time = (result.match(/\d+:\d{2}/) || [""])[0];
+  return { score, time };
+}
+
+function formatScore(match, won) {
+  const type = match.winType;
+  if (["BYE", "FOR", "M FOR", "MFFL", "NC"].includes(type)) return "";
+  let { score, time } = splitResult(match.result);
+  if (score && !won) score = score.split("-").reverse().join("-");
+  if (score === "0-0") score = "";
+  if (type === "F") return time || score;          // a fall is reported by its time
+  return [score, time && "(" + time + ")"].filter(Boolean).join(" ");
+}
+
+function ordinal(n) {
+  const s = ["th", "st", "nd", "rd"], v = n % 100;
+  return n + (s[(v - 20) % 10] || s[v] || s[0]);
+}
+
+// ---------- Building wrestler records ----------
+
+function placeMatchNumber(round) {
+  const m = round.match(/^(\d+)(st|nd|rd|th)\s+place/i);
+  return m ? parseInt(m[1], 10) : null;
+}
+
+function buildWrestlers(matches) {
+  const wrestlers = new Map();
+  const getW = (weight, name, team) => {
+    const key = weight + "|" + name + "|" + team;
+    if (!wrestlers.has(key)) wrestlers.set(key, { key, weight, name, team, bouts: [] });
+    return wrestlers.get(key);
+  };
+  for (const m of matches) {
+    getW(m.weight, m.winner, m.winnerTeam).bouts.push({ m, won: true });
+    if (m.loser) getW(m.weight, m.loser, m.loserTeam).bouts.push({ m, won: false });
+  }
+  for (const w of wrestlers.values()) w.bouts.sort((a, b) => a.m.order - b.m.order);
+
+  // Learn which rounds feed which placement matches from the file itself
+  // (brackets differ: e.g. semifinal losers may go straight to 3rd, or drop to consolation).
+  const feeds = new Map([["W|semifinal", 1]]);
+  for (const w of wrestlers.values()) {
+    w.bouts.forEach((b, i) => {
+      const place = placeMatchNumber(b.m.round);
+      if (place && i > 0) {
+        const prev = w.bouts[i - 1];
+        feeds.set((prev.won ? "W|" : "L|") + prev.m.round.toLowerCase(), place);
+      }
+    });
+  }
+
+  for (const w of wrestlers.values()) {
+    const real = w.bouts.filter(b => !["BYE", "NC"].includes(b.m.winType));
+    w.wins = real.filter(b => b.won).length;
+    w.losses = real.filter(b => !b.won).length;
+
+    const last = w.bouts[w.bouts.length - 1];
+    const place = placeMatchNumber(last.m.round);
+    const nextPlace = feeds.get((last.won ? "W|" : "L|") + last.m.round.toLowerCase());
+    if (place) {
+      w.place = last.won ? place : place + 1;
+      w.finish = ordinal(w.place) + " Place";
+    } else if (nextPlace) {
+      w.place = nextPlace + 0.5;
+      w.finish = ordinal(nextPlace) + "–" + ordinal(nextPlace + 1) + " Place";
+      w.finishNote = ordinal(nextPlace) + " place match not in file";
+    } else {
+      w.place = null;
+      w.finish = last.won ? "Last: won " + last.m.round : "Eliminated in " + last.m.round;
+    }
+  }
+  return [...wrestlers.values()];
+}
+
+// ---------- Rendering ----------
+
+let allWrestlers = [];
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function weightSort(a, b) {
+  const na = parseFloat(a), nb = parseFloat(b);
+  if (!isNaN(na) && !isNaN(nb) && na !== nb) return na - nb;
+  return a.localeCompare(b);
+}
+
+function wrestlerSort(a, b) {
+  if (a.place !== null || b.place !== null) {
+    if (a.place === null) return 1;
+    if (b.place === null) return -1;
+    if (a.place !== b.place) return a.place - b.place;
+  }
+  return (b.wins - a.wins) || (a.losses - b.losses) || a.name.localeCompare(b.name);
+}
+
+function renderBout({ m, won }) {
+  const [label, winVerb, lossVerb] = winTypeInfo(m.winType);
+  const opp = won ? m.loser : m.winner;
+  const oppTeam = won ? m.loserTeam : m.winnerTeam;
+  const isBye = m.winType === "BYE";
+  const nc = m.winType === "NC";
+  const badge = isBye || nc ? '<span class="badge N">–</span>' :
+    `<span class="badge ${won ? "W" : "L"}">${won ? "W" : "L"}</span>`;
+  const oppHtml = isBye || !opp ? '<span class="note">Bye</span>' :
+    `${won ? "over" : "to"} ${esc(opp)}${oppTeam ? ` <span class="opp-team">(${esc(oppTeam)})</span>` : ""}`;
+  return `<tr title="${esc(won ? winVerb : lossVerb)}">
+    <td class="round">${esc(m.round)}</td>
+    <td class="res">${badge}${esc(isBye ? "Bye" : label)}</td>
+    <td class="score">${esc(formatScore(m, won)) || "&nbsp;"}</td>
+    <td class="opp">${isBye ? "" : oppHtml}</td>
+  </tr>`;
+}
+
+function renderWrestler(w) {
+  const placed = w.place !== null;
+  return `<div class="wrestler">
+    <div class="head">
+      <span class="name">${esc(w.name)}</span>
+      <span class="team">${esc(w.team)}</span>
+      <span class="record">${w.wins}-${w.losses}</span>
+      <span class="finish ${placed ? "placed" : "out"}">${esc(w.finish)}${w.finishNote ? ` <span class="note">(${esc(w.finishNote)})</span>` : ""}</span>
+    </div>
+    <table><tbody>${w.bouts.map(renderBout).join("")}</tbody></table>
+  </div>`;
+}
+
+function render() {
+  const q = document.getElementById("search").value.trim().toLowerCase();
+  const weight = document.getElementById("weightFilter").value;
+  const team = document.getElementById("teamFilter").value;
+  const placersOnly = document.getElementById("placersOnly").checked;
+
+  const shown = allWrestlers.filter(w =>
+    (!weight || w.weight === weight) &&
+    (!team || w.team === team) &&
+    (!placersOnly || w.place !== null) &&
+    (!q || w.name.toLowerCase().includes(q) || w.team.toLowerCase().includes(q)));
+
+  const byWeight = new Map();
+  for (const w of shown) {
+    if (!byWeight.has(w.weight)) byWeight.set(w.weight, []);
+    byWeight.get(w.weight).push(w);
+  }
+  const html = [...byWeight.keys()].sort(weightSort).map(wt => {
+    const list = byWeight.get(wt).sort(wrestlerSort);
+    const label = /^\d+(\.\d+)?$/.test(wt) ? wt + " lbs" : wt;
+    return `<section class="weight"><h2>${esc(label)}</h2>${list.map(renderWrestler).join("")}</section>`;
+  }).join("");
+
+  document.getElementById("results").innerHTML = html || '<p class="note">No wrestlers match these filters.</p>';
+  document.getElementById("summary").textContent =
+    `Showing ${shown.length} of ${allWrestlers.length} wrestlers`;
+}
+
+function fillSelect(id, values, fmt) {
+  const sel = document.getElementById(id);
+  sel.length = 1;
+  for (const v of values) sel.add(new Option(fmt ? fmt(v) : v, v));
+}
+
+function loadText(text, fileName) {
+  const errorEl = document.getElementById("error");
+  errorEl.textContent = "";
+  try {
+    const matches = toMatches(parseCSV(text.replace(/^﻿/, "")));
+    if (!matches.length) throw new Error("No matches found in this file.");
+    allWrestlers = buildWrestlers(matches);
+
+    const events = [...new Set(matches.map(m => m.event).filter(Boolean))];
+    const dates = [...new Set(matches.map(m => m.date).filter(Boolean))];
+    document.getElementById("title").textContent = events.join(" / ") || "Wrestling Results";
+    document.getElementById("subtitle").textContent =
+      [dates.join(", "), matches[0].location, `${matches.length} matches`].filter(Boolean).join(" · ") ||
+      fileName;
+    document.title = (events[0] || "Wrestling") + " Results";
+
+    fillSelect("weightFilter", [...new Set(allWrestlers.map(w => w.weight))].sort(weightSort),
+      v => /^\d+(\.\d+)?$/.test(v) ? v + " lbs" : v);
+    fillSelect("teamFilter", [...new Set(allWrestlers.map(w => w.team).filter(Boolean))].sort());
+    document.getElementById("controls").style.display = "flex";
+    render();
+  } catch (e) {
+    errorEl.textContent = e.message;
+  }
+}
+
+function loadFile(file) {
+  const reader = new FileReader();
+  reader.onload = () => loadText(reader.result, file.name);
+  reader.readAsText(file);
+}
+
+// ---------- Wiring ----------
+
+const drop = document.getElementById("drop");
+document.getElementById("file").addEventListener("change", e => e.target.files[0] && loadFile(e.target.files[0]));
+drop.addEventListener("dragover", e => { e.preventDefault(); drop.classList.add("over"); });
+drop.addEventListener("dragleave", () => drop.classList.remove("over"));
+drop.addEventListener("drop", e => {
+  e.preventDefault();
+  drop.classList.remove("over");
+  if (e.dataTransfer.files[0]) loadFile(e.dataTransfer.files[0]);
+});
+for (const id of ["search", "weightFilter", "teamFilter", "placersOnly"]) {
+  document.getElementById(id).addEventListener("input", render);
+}
+document.getElementById("printBtn").addEventListener("click", () => window.print());
+
+// Load a CSV hosted alongside the page: index.html?csv=results.csv
+const csvParam = new URLSearchParams(location.search).get("csv");
+if (csvParam) {
+  fetch(csvParam)
+    .then(r => { if (!r.ok) throw new Error(r.status + " " + r.statusText); return r.text(); })
+    .then(t => loadText(t, csvParam))
+    .catch(e => { document.getElementById("error").textContent = `Couldn't load ${csvParam}: ${e.message}`; });
+}
+</script>
+</body>
+</html>
